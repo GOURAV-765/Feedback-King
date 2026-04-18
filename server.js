@@ -13,12 +13,13 @@ app.use(cors());
 app.use(express.static(path.join(__dirname, 'frontend')));
 
 // Automatically connect to SQLite Database!
-// Creates a new 'database.sqlite' file directly in the folder so no external servers are needed.
-const db = new sqlite3.Database('./database.sqlite', (err) => {
+// On Vercel, the root file system is read-only, so we MUST write to /tmp.
+const dbPath = process.env.VERCEL ? '/tmp/database.sqlite' : './database.sqlite';
+const db = new sqlite3.Database(dbPath, (err) => {
   if (err) {
     console.error('Failed to create SQLite Database:', err.message);
   } else {
-    console.log('Connected to Local SQLite Database successfully!');
+    console.log(`Connected to Local SQLite Database successfully at ${dbPath}!`);
     initializeDatabase();
   }
 });
@@ -185,7 +186,12 @@ app.delete('/feedback/:id', (req, res) => {
   });
 });
 
-// Start the server
-app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
-});
+// Start the server locally only
+if (!process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`Server is running on http://localhost:${PORT}`);
+  });
+}
+
+// Export the app for Vercel Serverless environment
+module.exports = app;
