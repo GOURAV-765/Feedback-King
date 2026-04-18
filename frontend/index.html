@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexus Feedback</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <!-- Landing / Auth Page -->
+    <div id="auth-view" class="view active">
+        <div class="auth-container">
+            <div class="auth-branding">
+                <h1>Nexus</h1>
+                <p>Shape the future of our products. Provide feedback, request features, and vote on what matters.</p>
+            </div>
+            <div class="auth-card glass-panel">
+                <h2 id="auth-title">Create Account</h2>
+                <p class="auth-subtitle">Join the community to share your feedback.</p>
+                
+                <form id="auth-form">
+                    <div class="input-group">
+                        <label for="username">Username</label>
+                        <input type="text" id="username" placeholder="Enter your username" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="password">Password</label>
+                        <input type="password" id="password" placeholder="Create a password" required>
+                    </div>
+                    <button type="submit" class="btn-primary flex-center" id="auth-submit-btn">
+                        Register
+                    </button>
+                    <p id="auth-error" class="error-text"></p>
+                </form>
+
+                <div class="auth-switch">
+                    <p id="auth-switch-text">Already have an account? <span id="auth-switch-action">Login here</span></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dashboard Layout -->
+    <div id="main-layout" class="view hidden">
+        <!-- Sidebar -->
+        <aside class="sidebar glass-panel">
+            <div class="sidebar-header">
+                <h2>Nexus</h2>
+                <div class="user-badge" id="current-user-display">👤 User</div>
+            </div>
+            <nav class="sidebar-nav">
+                <button class="nav-item active" onclick="showDashboard()">Dashboard</button>
+                <button class="nav-item" id="admin-add-btn" onclick="openAdminModal()" style="display: none;">Add Product</button>
+            </nav>
+            <div class="sidebar-footer">
+                <button class="btn-secondary" id="logout-btn">Logout</button>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            
+            <!-- Dashboard View -->
+            <div id="dashboard-view" class="content-view active">
+                <header class="content-header">
+                    <h1>Product Roadmap</h1>
+                    <p>Select a product to view details and provide feedback.</p>
+                </header>
+                <div class="filters">
+                    <button class="filter-chip active">All</button>
+                    <button class="filter-chip">Hardware</button>
+                    <button class="filter-chip">Software</button>
+                    <button class="filter-chip">App</button>
+                </div>
+                <div id="product-grid" class="product-grid">
+                    <!-- Products injected here -->
+                </div>
+            </div>
+
+            <!-- Detail View -->
+            <div id="detail-view" class="content-view hidden">
+                <div class="detail-header">
+                    <button class="btn-icon" onclick="showDashboard()">← Back</button>
+                    <div class="title-row">
+                        <h1 id="detail-title">Product Name</h1>
+                        <span class="status-badge" id="detail-status">Status</span>
+                    </div>
+                    <p id="detail-desc">Description</p>
+                </div>
+
+                <div class="detail-grid">
+                    <!-- Feedback List -->
+                    <div class="feedback-section glass-panel">
+                        <div class="section-top">
+                            <h3>Community Feedback <span id="feedback-count">(0)</span></h3>
+                            <button class="btn-primary" onclick="openFeedbackModal()">Add Feedback</button>
+                        </div>
+                        <div id="feedback-list" class="feedback-list">
+                            <!-- Feedbacks injected here -->
+                        </div>
+                    </div>
+
+                    <!-- Analytics Side -->
+                    <div class="analytics-section glass-panel">
+                        <h3>Average Rating</h3>
+                        <div class="rating-display">
+                            <h1 id="avg-rating-huge">0.0</h1>
+                            <span class="stars-visual">⭐️</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <!-- Add Feedback Modal -->
+    <div id="feedback-modal" class="modal-overlay hidden">
+        <div class="modal glass-panel">
+            <div class="modal-head">
+                <h2>Leave Feedback</h2>
+                <button class="close-btn" onclick="closeModals()">✕</button>
+            </div>
+            <form id="feedback-form" class="modal-form">
+                <div class="rating-selector">
+                    <p>Your Rating</p>
+                    <div class="stars-input">
+                        <input type="radio" id="s5" name="rate" value="5"><label for="s5">★</label>
+                        <input type="radio" id="s4" name="rate" value="4"><label for="s4">★</label>
+                        <input type="radio" id="s3" name="rate" value="3"><label for="s3">★</label>
+                        <input type="radio" id="s2" name="rate" value="2"><label for="s2">★</label>
+                        <input type="radio" id="s1" name="rate" value="1"><label for="s1">★</label>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label>Your Thoughts</label>
+                    <textarea id="feedback-text" rows="4" placeholder="What do you love? What can be improved?" required></textarea>
+                </div>
+                <button type="submit" class="btn-primary full-width">Submit</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Product Modal (Admin) -->
+    <div id="admin-modal" class="modal-overlay hidden">
+        <div class="modal glass-panel">
+            <div class="modal-head">
+                <h2>Add Product</h2>
+                <button class="close-btn" onclick="closeModals()">✕</button>
+            </div>
+            <form id="admin-form" class="modal-form">
+                <div class="input-group">
+                    <label>Name</label>
+                    <input type="text" id="prod-name" required>
+                </div>
+                <div class="input-group">
+                    <label>Category</label>
+                    <select id="prod-cat">
+                        <option value="Hardware">Hardware</option>
+                        <option value="Software">Software</option>
+                        <option value="App">App</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label>Status</label>
+                    <select id="prod-status">
+                        <option value="Planned">Planned</option>
+                        <option value="In-Progress">In-Progress</option>
+                        <option value="Live">Live</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label>Description</label>
+                    <textarea id="prod-desc" rows="3" required></textarea>
+                </div>
+                <button type="submit" class="btn-primary full-width">Create Product</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
