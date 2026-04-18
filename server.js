@@ -1,5 +1,4 @@
 const express = require('express');
-const sqlite3 = require('sqlite3').verbose();
 const cors = require('cors');
 const path = require('path');
 
@@ -12,178 +11,153 @@ app.use(cors());
 // Serve frontend static files
 app.use(express.static(path.join(__dirname, 'frontend')));
 
-// Automatically connect to SQLite Database!
-// On Vercel, the root file system is read-only, so we MUST write to /tmp.
-const dbPath = process.env.VERCEL ? '/tmp/database.sqlite' : './database.sqlite';
-const db = new sqlite3.Database(dbPath, (err) => {
-  if (err) {
-    console.error('Failed to create SQLite Database:', err.message);
-  } else {
-    console.log(`Connected to Local SQLite Database successfully at ${dbPath}!`);
-    initializeDatabase();
-  }
-});
+// =======================
+// IN-MEMORY MOCK DATABASE
+// (Works flawlessly on Vercel Serverless Functions)
+// =======================
+let users = [];
+let products = [];
+let feedback = [];
+let userIds = 1;
+let productIds = 1;
+let feedbackIds = 1;
 
-// Auto-build the newly converted schema so it just works perfectly out of the box
 function initializeDatabase() {
-    db.serialize(() => {
-        db.run(`CREATE TABLE IF NOT EXISTS Users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT NOT NULL UNIQUE,
-            password TEXT NOT NULL,
-            role TEXT DEFAULT 'user',
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )`);
+    // Check if admin exists
+    if (users.length === 0) {
+        console.log("Empty DB detected. Generating default test data...");
+        users.push({ id: userIds++, username: 'admin', password: 'admin', role: 'admin', created_at: new Date() });
+        
+        const defaultProducts = [
+            { name: 'Lumina AI Keyboard', description: 'A predictive typing assistant using advanced LLM integration directly onto your physical keyboard interface.', category: 'Hardware', status: 'In-Progress' },
+            { name: 'NexSync Cloud', description: 'Ultra-fast serverless file syncing optimized for large media and 3D rendering workflows.', category: 'Software', status: 'Live' },
+            { name: 'Nexus Watch App', description: 'A companion fitness and health application integrating with Nexus smart devices.', category: 'App', status: 'Planned' },
+            { name: 'Evo Drone X', description: 'Next-generation aerial drone with automated mapping features.', category: 'Hardware', status: 'Live' },
+            { name: 'CodeAssist IDE', description: 'Blazing fast code editor with AI debugging capabilities.', category: 'Software', status: 'In-Progress' },
+            { name: 'Fitness Journey', description: 'Track your daily workouts, macros, and sleep health.', category: 'App', status: 'Live' },
+            { name: 'HoloLens Display', description: 'An augmented reality monitor replacement tool.', category: 'Hardware', status: 'Planned' }
+        ];
 
-        db.run(`CREATE TABLE IF NOT EXISTS Products (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            description TEXT,
-            category TEXT DEFAULT 'General',
-            status TEXT DEFAULT 'Live',
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )`);
-
-        db.run(`CREATE TABLE IF NOT EXISTS Feedback (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            product_id INTEGER NOT NULL,
-            feedback_text TEXT NOT NULL,
-            rating INTEGER CHECK(rating >= 1 AND rating <= 5),
-            helpful_votes INTEGER DEFAULT 0,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (user_id) REFERENCES Users(id),
-            FOREIGN KEY (product_id) REFERENCES Products(id)
-        )`);
-
-        // Check if admin exists to avoid inserting duplicates on multiple runs
-        db.get("SELECT COUNT(*) as count FROM Users", (err, row) => {
-            if (row.count === 0) {
-                console.log("Empty DB detected. Generating default test data...");
-                db.run(`INSERT INTO Users (username, password, role) VALUES ('admin', 'admin', 'admin')`);
-                db.run(`INSERT INTO Products (name, description, category, status) VALUES 
-                ('Lumina AI Keyboard', 'A predictive typing assistant using advanced LLM integration directly onto your physical keyboard interface.', 'Hardware', 'In-Progress'),
-                ('NexSync Cloud', 'Ultra-fast serverless file syncing optimized for large media and 3D rendering workflows.', 'Software', 'Live'),
-                ('Nexus Watch App', 'A companion fitness and health application integrating with Nexus smart devices.', 'App', 'Planned'),
-                ('Evo Drone X', 'Next-generation aerial drone with automated mapping features.', 'Hardware', 'Live'),
-                ('CodeAssist IDE', 'Blazing fast code editor with AI debugging capabilities.', 'Software', 'In-Progress'),
-                ('Fitness Journey', 'Track your daily workouts, macros, and sleep health.', 'App', 'Live'),
-                ('HoloLens Display', 'An augmented reality monitor replacement tool.', 'Hardware', 'Planned')`);
-            }
+        defaultProducts.forEach(p => {
+            products.push({ id: productIds++, ...p, created_at: new Date() });
         });
-    });
+    }
 }
+// Run initialization
+initializeDatabase();
 
 // =======================
-// EXPRESS ROUTES FOR SQLITE
+// EXPRESS ROUTES FOR MOCK DB
 // =======================
 
 // 1. Register User
 app.post('/register', (req, res) => {
   const { username, password } = req.body;
-  const query = 'INSERT INTO Users (username, password) VALUES (?, ?)';
-  
-  db.run(query, [username, password], function(err) {
-    if (err) return res.status(500).json({ error: "Username might already be taken." });
-    res.status(201).json({ message: 'User registered successfully!', userId: this.lastID });
-  });
+  if (users.find(u => u.username === username)) {
+      return res.status(500).json({ error: "Username might already be taken." });
+  }
+  const newUser = { id: userIds++, username, password, role: 'user', created_at: new Date() };
+  users.push(newUser);
+  res.status(201).json({ message: 'User registered successfully!', userId: newUser.id });
 });
 
 // 2. Login User
 app.post('/login', (req, res) => {
   const { username, password } = req.body;
-  const query = 'SELECT * FROM Users WHERE username = ? AND password = ?';
-  
-  db.get(query, [username, password], (err, row) => {
-    if (err) return res.status(500).json({ error: err.message });
-    if (!row) return res.status(401).json({ message: 'Invalid credentials' });
-    res.status(200).json({ message: 'Login successful!', user: row });
-  });
+  const user = users.find(u => u.username === username && u.password === password);
+  if (!user) return res.status(401).json({ message: 'Invalid credentials' });
+  res.status(200).json({ message: 'Login successful!', user });
 });
 
 // 3. Add Product
 app.post('/products', (req, res) => {
   const { name, description, category, status } = req.body;
-  const query = 'INSERT INTO Products (name, description, category, status) VALUES (?, ?, ?, ?)';
-  
-  db.run(query, [name, description, category || 'General', status || 'Live'], function(err) {
-    if (err) return res.status(500).json({ error: err.message });
-    res.status(201).json({ message: 'Product added successfully!', productId: this.lastID });
-  });
+  const newProduct = { 
+      id: productIds++, 
+      name, 
+      description, 
+      category: category || 'General', 
+      status: status || 'Live', 
+      created_at: new Date() 
+  };
+  products.push(newProduct);
+  res.status(201).json({ message: 'Product added successfully!', productId: newProduct.id });
 });
 
 // 4. Get Products
 app.get('/products', (req, res) => {
-  const query = `
-    SELECT p.*, 
-      COUNT(f.id) as total_reviews, 
-      IFNULL(AVG(f.rating), 0) as avg_rating 
-    FROM Products p 
-    LEFT JOIN Feedback f ON p.id = f.product_id 
-    GROUP BY p.id
-    ORDER BY p.created_at DESC
-  `;
-  db.all(query, (err, rows) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.status(200).json(rows);
+  const result = products.map(p => {
+      const productFeedback = feedback.filter(f => f.product_id == p.id);
+      const total_reviews = productFeedback.length;
+      const sum_rating = productFeedback.reduce((acc, f) => acc + f.rating, 0);
+      const avg_rating = total_reviews > 0 ? sum_rating / total_reviews : 0;
+      return { ...p, total_reviews, avg_rating };
   });
+  
+  result.sort((a,b) => b.created_at - a.created_at);
+  res.status(200).json(result);
 });
 
 // 5. Add Feedback
 app.post('/feedback', (req, res) => {
   const { user_id, product_id, feedback_text, rating } = req.body;
-  const query = 'INSERT INTO Feedback (user_id, product_id, feedback_text, rating) VALUES (?, ?, ?, ?)';
-  
-  db.run(query, [user_id, product_id, feedback_text, rating], function(err) {
-    if (err) return res.status(500).json({ error: err.message });
-    res.status(201).json({ message: 'Feedback added successfully!', feedbackId: this.lastID });
-  });
+  const newFeedback = { 
+      id: feedbackIds++, 
+      user_id: Number(user_id), 
+      product_id: Number(product_id), 
+      feedback_text, 
+      rating: Number(rating), 
+      helpful_votes: 0, 
+      created_at: new Date() 
+  };
+  feedback.push(newFeedback);
+  res.status(201).json({ message: 'Feedback added successfully!', feedbackId: newFeedback.id });
 });
 
 // 6. Get Feedback
 app.get('/feedback', (req, res) => {
   const { product_id } = req.query;
-  let query = `
-    SELECT Feedback.*, Users.username, Products.name as product_name 
-    FROM Feedback 
-    JOIN Users ON Feedback.user_id = Users.id 
-    JOIN Products ON Feedback.product_id = Products.id
-  `;
-  let queryParams = [];
-
+  let filteredFeedback = feedback;
   if (product_id) {
-    query += ' WHERE product_id = ?';
-    queryParams.push(product_id);
+      filteredFeedback = filteredFeedback.filter(f => f.product_id == product_id);
   }
   
-  query += ' ORDER BY Feedback.created_at DESC';
-
-  db.all(query, queryParams, (err, rows) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.status(200).json(rows);
+  const result = filteredFeedback.map(f => {
+      const u = users.find(u => u.id === f.user_id);
+      const p = products.find(p => p.id === f.product_id);
+      return { 
+          ...f, 
+          username: u ? u.username : 'Unknown', 
+          product_name: p ? p.name : 'Unknown' 
+      };
   });
+  
+  result.sort((a,b) => b.created_at - a.created_at);
+  res.status(200).json(result);
 });
 
 // 6.5. Upvote Feedback
 app.post('/feedback/:id/upvote', (req, res) => {
-  const feedbackId = req.params.id;
-  const query = 'UPDATE Feedback SET helpful_votes = helpful_votes + 1 WHERE id = ?';
-  db.run(query, [feedbackId], function(err) {
-    if (err) return res.status(500).json({ error: err.message });
-    res.status(200).json({ message: 'Upvoted!' });
-  });
+  const feedbackId = Number(req.params.id);
+  const fb = feedback.find(f => f.id === feedbackId);
+  if (fb) {
+      fb.helpful_votes += 1;
+      res.status(200).json({ message: 'Upvoted!' });
+  } else {
+      res.status(404).json({ error: 'Feedback not found' });
+  }
 });
 
 // 7. Delete Feedback
 app.delete('/feedback/:id', (req, res) => {
-  const feedbackId = req.params.id;
-  const query = 'DELETE FROM Feedback WHERE id = ?';
-  
-  db.run(query, [feedbackId], function(err) {
-    if (err) return res.status(500).json({ error: err.message });
-    if (this.changes === 0) return res.status(404).json({ message: 'Feedback not found' });
-    res.status(200).json({ message: 'Feedback deleted successfully!' });
-  });
+  const feedbackId = Number(req.params.id);
+  const index = feedback.findIndex(f => f.id === feedbackId);
+  if (index !== -1) {
+      feedback.splice(index, 1);
+      res.status(200).json({ message: 'Feedback deleted successfully!' });
+  } else {
+      res.status(404).json({ message: 'Feedback not found' });
+  }
 });
 
 // Start the server locally only
