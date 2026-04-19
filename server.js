@@ -91,7 +91,18 @@ app.get('/products', (req, res) => {
       const total_reviews = productFeedback.length;
       const sum_rating = productFeedback.reduce((acc, f) => acc + f.rating, 0);
       const avg_rating = total_reviews > 0 ? sum_rating / total_reviews : 0;
-      return { ...p, total_reviews, avg_rating };
+      
+      let latest_feedback = null;
+      if (total_reviews > 0) {
+          const latest = productFeedback[productFeedback.length - 1]; // last submitted is at the end of the array
+          const u = users.find(u => u.id === latest.user_id);
+          latest_feedback = {
+              username: u ? u.username : 'Unknown Client',
+              feedback_text: latest.feedback_text
+          };
+      }
+
+      return { ...p, total_reviews, avg_rating, latest_feedback };
   });
   
   result.sort((a,b) => b.created_at - a.created_at);

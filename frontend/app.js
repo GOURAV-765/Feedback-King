@@ -121,6 +121,15 @@ function renderProducts(products) {
     
     container.innerHTML = products.map(p => {
         const pStr = encodeURIComponent(JSON.stringify(p));
+        
+        let latestFeedbackHtml = '';
+        if (p.latest_feedback) {
+            latestFeedbackHtml = `
+            <div class="latest-feedback-snippet" style="margin-top: 12px; font-size: 0.85em; color: var(--text-secondary); border-top: 1px solid rgba(255,255,255,0.1); padding-top: 8px;">
+                <strong>👤 ${p.latest_feedback.username}:</strong> <i>"${p.latest_feedback.feedback_text}"</i>
+            </div>`;
+        }
+
         return `
         <div class="product-card glass-panel" onclick="showDetail('${pStr}')">
             <div class="card-head">
@@ -132,6 +141,7 @@ function renderProducts(products) {
                 <span>${p.category}</span>
                 <span>${p.total_reviews} Reviews • ${parseFloat(p.avg_rating).toFixed(1)} ★</span>
             </div>
+            ${latestFeedbackHtml}
         </div>
         `;
     }).join('');
